@@ -1,5 +1,5 @@
 import os
-from sqlalchemy import create_engine
+from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker, declarative_base
 from dotenv import load_dotenv
 
@@ -12,15 +12,18 @@ DATABASE_URL = os.getenv("DATABASE_URL")
 if not DATABASE_URL:
     raise ValueError("La variable de entorno DATABASE_URL no esta configurada.")
 
-db_engine = create_engine(DATABASE_URL)
+db_engine = create_async_engine(DATABASE_URL, echo=False)
 
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=db_engine)
+SessionLocal = sessionmaker(
+    bind=db_engine,
+    class_=AsyncSession,
+    autocommit=False,
+    autoflush=False,
+    expire_on_commit=False
+)
 
 Base = declarative_base()
 
-def get_database_session():
-    transaction_session = SessionLocal()
-    try:
+async def get_database_session():
+    async with SessionLocal() as transaction_session:
         yield transaction_session
-    finally:
-        transaction_session.close()

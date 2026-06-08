@@ -1,6 +1,6 @@
 # app/routers/health.py
 from fastapi import APIRouter, Depends
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import text
 from app.database import get_database_session
 
@@ -8,9 +8,9 @@ from app.database import get_database_session
 router = APIRouter(tags=["System Health"])
 
 @router.get("/health", summary="Verificar estado del sistema")
-def check_health(db_session: Session = Depends(get_database_session)):
+async def check_health(db_session: AsyncSession = Depends(get_database_session)):
     try:
-        db_session.execute(text("SELECT 1"))
+        await db_session.execute(text("SELECT 1"))
         return {
             "status": "operativo",
             "database_connection": "exitosa",

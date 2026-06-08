@@ -1,5 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.future import select
+from sqlalchemy.orm import selectinload
 from typing import List
 
 from app.database import get_database_session
@@ -12,7 +14,7 @@ router = APIRouter(
 )
 
 @router.post("/", response_model=RecipeResponse, status_code=status.HTTP_201_CREATED)
-def create_new_recipe(recipe_payload: RecipeCreate, db_session: Session = Depends(get_database_session)):
+async def create_new_recipe(recipe_payload: RecipeCreate, db_session: AsyncSession = Depends(get_database_session)):
     # Se extraen los ingredientes del payload validado antes de crear el modelo principal
     ingredients_payload = recipe_payload.ingredients
     
@@ -21,7 +23,9 @@ def create_new_recipe(recipe_payload: RecipeCreate, db_session: Session = Depend
     new_recipe = RecipeModel(**recipe_attributes)
     
     db_session.add(new_recipe)
-    db_session.flush() # flush asigna un ID a new_recipe sin cerrar la transaccion
+    await db_session.flush() # flush asigna un ID a new_recipe sin cerrar la transaccion
+    
+    created_ingredients = []
     
     # Se construyen y asocian los ingredientes utilizando el ID generado
     for ingredient_item in ingredients_payload:
@@ -30,20 +34,28 @@ def create_new_recipe(recipe_payload: RecipeCreate, db_session: Session = Depend
             recipe_id=new_recipe.id
         )
         db_session.add(new_ingredient)
+        created_ingredients.append(new_ingredient)
         
-    db_session.commit()
-    db_session.refresh(new_recipe)
+    await db_session.commit()
     
-    return new_recipe
+    query_recipe = select(RecipeModel).options(selectinload(RecipeModel.ingredients)).filter(RecipeModel.id == new_recipe.id)
+    query_result = await db_session.execute(query_recipe)
+    populated_recipe = query_result.scalars().first()
+    
+    return populated_recipe
 
 @router.get("/", response_model=List[RecipeResponse])
-def get_all_recipes(db_session: Session = Depends(get_database_session)):
-    recipes_collection = db_session.query(RecipeModel).all()
+async def get_all_recipes(db_session: AsyncSession = Depends(get_database_session)):
+    query = select(RecipeModel).options(selectinload(RecipeModel.ingredients))
+    result = await db_session.execute(query)
+    recipes_collection = result.scalars().all()
     return recipes_collection
 
 @router.get("/{recipe_id}", response_model=RecipeResponse)
-def get_recipe_by_id(recipe_id: int, db_session: Session = Depends(get_database_session)):
-    target_recipe = db_session.query(RecipeModel).filter(RecipeModel.id == recipe_id).first()
+async def get_recipe_by_id(recipe_id: int, db_session: AsyncSession = Depends(get_database_session)):
+    query = select(RecipeModel).options(selectinload(RecipeModel.ingredients)).filter(RecipeModel.id == recipe_id)
+    result = await db_session.execute(query)
+    target_recipe = result.scalars().first()
     
     if not target_recipe:
         raise HTTPException(
