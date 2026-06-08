@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from app.database import db_engine, Base
-from app.routers import health
+from app.routers import health, recipe
 
 # TODO: Eliminar cuando se implemente Alembic para migraciones
 Base.metadata.create_all(bind=db_engine)
@@ -11,5 +11,5 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# Conectamos el enrutador modular a la aplicacion principal
 app.include_router(health.router)
+app.include_router(recipe.router)
