@@ -27,7 +27,6 @@ source venv/bin/activate  # En Windows: venv\Scripts\activate
 ### 2. Instalar las dependencias requeridas:
 ```bash
 pip install -r requirements.txt
-
 ```
 
 
