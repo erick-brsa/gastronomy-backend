@@ -26,6 +26,7 @@ class RecipeCreate(RecipeBase):
 
 class RecipeResponse(RecipeBase):
     id: int
+    user_id: int
     ingredients: List[IngredientResponse]
 
     model_config = ConfigDict(from_attributes=True)

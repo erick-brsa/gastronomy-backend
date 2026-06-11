@@ -7,6 +7,8 @@ from typing import List
 from app.database import get_database_session
 from app.models.recipe import RecipeModel, IngredientModel
 from app.schemas.recipe import RecipeCreate, RecipeResponse
+from app.security import get_current_user
+from app.models.user import UserModel
 
 router = APIRouter(
     prefix="/recipes",
@@ -14,13 +16,17 @@ router = APIRouter(
 )
 
 @router.post("/", response_model=RecipeResponse, status_code=status.HTTP_201_CREATED)
-async def create_new_recipe(recipe_payload: RecipeCreate, db_session: AsyncSession = Depends(get_database_session)):
+async def create_new_recipe(
+    recipe_payload: RecipeCreate, 
+    db_session: AsyncSession = Depends(get_database_session),
+    current_user: UserModel = Depends(get_current_user)
+):
     # Se extraen los ingredientes del payload validado antes de crear el modelo principal
     ingredients_payload = recipe_payload.ingredients
     
     # Se instancia el modelo ORM de la receta omitiendo la lista de ingredientes
     recipe_attributes = recipe_payload.model_dump(exclude={"ingredients"})
-    new_recipe = RecipeModel(**recipe_attributes)
+    new_recipe = RecipeModel(**recipe_attributes, user_id=current_user.id)
     
     db_session.add(new_recipe)
     await db_session.flush() # flush asigna un ID a new_recipe sin cerrar la transaccion

@@ -10,6 +10,9 @@ class RecipeModel(Base):
     description = Column(Text, nullable=True)
     instructions = Column(Text, nullable=False)
     prep_time_minutes = Column(Integer, nullable=False)
+    
+    # Nueva llave foranea vinculando la receta con el usuario creador
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
 
     ingredients = relationship(
         "IngredientModel", 
